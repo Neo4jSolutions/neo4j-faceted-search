@@ -128,3 +128,19 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# next.js stuff
+cache/
+fallback-build-manifest.json
+react-loadable-manifest.json
+server/
+static/
+trace
+types/
