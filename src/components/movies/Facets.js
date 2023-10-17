@@ -82,7 +82,7 @@ const getMenus = ({ userChecks, setUserChecks, searchCriteria, setSearchCriteria
         subMenus.push(subMenu(MenuKeys.Ratings, "Ratings", IconMap.Ratings, ratings));
         subMenus.push(subMenu(MenuKeys.Revenues, "Revenues", IconMap.Revenues, revenues));
         subMenus.push(subMenu(MenuKeys.Runtimes, "Runtimes", IconMap.Runtimes, runtimes));
-        subMenus.push(subMenu(MenuKeys.Directors, "Directors", IconMap.Directors, directors));
+        // subMenus.push(subMenu(MenuKeys.Directors, "Directors", IconMap.Directors, directors));
 
         return subMenus;
     }
@@ -254,10 +254,14 @@ const updateMenuFilters = ({ key, value, menuFilters, setMenuFilters }) => {
 }
 
 const getFacetCount = (facetCounts, value) => {
+
     var key = '';
     switch (value.label) {
-        case 'MovieYears':
-            key = 'movieYears';
+        case 'Movie':
+            key = 'imdbBucket';
+            break;
+        case 'Movie':
+            key = 'yearBucket';
             break;
         case 'Genres':
             key = 'genres';
@@ -265,20 +269,18 @@ const getFacetCount = (facetCounts, value) => {
         case 'Directors':
             key = 'directors';
             break;
-        case 'Revenue':
-            key = 'revenues';
+        case 'Movie':
+            key = 'revenueBucket';
             break;
-        case 'Ratings':
-            key = 'ratings';
-            break;
-        case 'Runtimes':
-            key = 'runtimes';
+        case 'Movie':
+            key = 'runtimeBucket';
             break;
         default:
             break;
     }
     const facetMap = facetCounts[key] || {};
     const count = facetMap[value.value];
+    console.log("count", facetMap)
     return count;
 }
 
@@ -357,6 +359,7 @@ const getSubMenu = ({ userChecks, setUserChecks, searchCriteria, setSearchCriter
     }
 
 const getValues = (propertyValuesEntry) => {
+    console.log(propertyValuesEntry)
     const labelAndProp = {
         label: propertyValuesEntry.label,
         property: propertyValuesEntry.property
@@ -376,18 +379,7 @@ const getMenuItemKey = (menuKey, value) => {
     return itemKey;
 }
 
-
-const handleReset = (setSearchCriteria, setUserChecks, setColdStart) => {
-    let newUserChecks = {}
-    let searchCriteria = {}
-    setSearchCriteria(searchCriteria)
-    setUserChecks(newUserChecks)
-    setColdStart(false)
-
-};
-
 const Facets = (props) => {
-
     const {
         searchCriteria, setSearchCriteria,
         coldStart, setColdStart,
@@ -409,7 +401,14 @@ const Facets = (props) => {
     const [runtimes, setRunTime] = useState(PresetMovieRunTimes);
 
     const [defaultOpenKeys, setDefaultOpenKeys] = useState([]);
-    const [defaultSelectedKeys, setDefaultSelectedKeys] = useState([]);
+    const [defaultSelectedKeys, setDefaultSelectedKeys] = useState(["genres_menu_Adventure"]);
+
+    const handleReset = () => {
+        setSearchCriteria({})
+        setUserChecks({})
+        setColdStart(false)
+
+    };
 
 
     useEffect(() => {
@@ -477,7 +476,7 @@ const Facets = (props) => {
                 height: 'calc(100vh - 20px)',
                 minWidth: '270px'
             }}>
-                <Button onClick={(setSearchCriteria, setUserChecks, setColdStart) => handleReset(setSearchCriteria, setUserChecks, setColdStart)} size="small" style={{ width: 50, alignItems: "center", height: "50" }}>Reset</Button>
+                <Button onClick={() => handleReset()} size="small" style={{ width: 50, alignItems: "center", height: "50" }}>Reset</Button>
                 <Menu
                     style={{ width: 270 }}
                     defaultSelectedKeys={defaultSelectedKeys}
@@ -485,7 +484,7 @@ const Facets = (props) => {
                     mode={'inline'}
                 >
                     {
-                        menu({ setSearchCriteria, movieYears, genres, directors, revenues, ratings, runtimes })
+                        menu({ setSearchCriteria, genres, directors, movieYears, revenues, ratings, runtimes })
                     }
                 </Menu>
             </div>
