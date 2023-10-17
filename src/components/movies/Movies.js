@@ -9,6 +9,8 @@ const Movies = (props) => {
     const [facetCounts, setFacetCounts] = useState({});
     const [userChecks, setUserChecks] = useState({});
 
+    console.log("searchCriteria", searchCriteria)
+
     return (
         <div style={{ display: 'flex', flexFlow: 'row', marginTop: '10px', borderBottom: '1px dotted gray' }}>
             <Facets

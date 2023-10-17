@@ -27,22 +27,27 @@ export const SearchWithFacets = `
 WITH $searchCriteria as searchCriteria,
 {
     Movie: {
-		props: ["year", "revenue", "runtime", "languages"],
+		props: ["year", "revenue", "runtime","imdbRating" ,"languages","noProperty"],
 		match: "(movie:Movie)",
 		where: {
 			year: "
 			   any(x IN searchCriteria.yearRanges WHERE 
-				  x.low <= apoc.convert.toFloat(movie.year) < x.high
+				  x.low <= toFloat(movie.year) < x.high
 			   )
 			",
 			revenue: "
 			   any(x IN searchCriteria.revenueRanges WHERE 
-				  x.low <= apoc.convert.toFloat(movie.revenue) < x.high
+				  x.low <= toFloat(movie.revenue) < x.high
 			   )
 			",
 			runtime: "
 			   any(x IN searchCriteria.runtimeRanges WHERE 
-				  x.low <= apoc.convert.toFloat(movie.runtime) < x.high
+				  x.low <= toFloat(movie.runtime) < x.high
+			   )
+			",
+         imdbRating: "
+			   any(x IN searchCriteria.imdbRanges WHERE 
+				  x.low <= toFloat(movie.runtime) < x.high
 			   )
 			",
 			noProperty: ""
@@ -71,6 +76,7 @@ WITH cypherModel, {
    revenueRanges: coalesce(searchCriteria.revenueRanges, []),
    runtimeRanges: coalesce(searchCriteria.runtimeRanges, []),
    yearRanges: coalesce(searchCriteria.yearRanges, []),
+   imdbRanges: coalesce(searchCriteria.imdbRanges, []),
    keywords: coalesce(searchCriteria.keywords, "")
 } as searchCriteria
 
@@ -107,6 +113,7 @@ WITH cypherModel, searchCriteria, searchCriteriaMap, keywordWhereSnippet,
 			{searchKey: "revenueRanges", propKey: "revenue"},
 			{searchKey: "yearRanges", propKey: "year"},
 			{searchKey: "runtimeRanges", propKey: "runtime"},
+            {searchKey: "imdbRanges", propKey: "imdbRating"}
 		] 
 		|
 		CASE WHEN size(searchCriteria[x.searchKey]) > 0 
@@ -137,7 +144,10 @@ WITH searchCriteria, searchCriteriaMap, cypherModel, keywordWhereSnippet, item,
 
 WITH searchCriteria, searchCriteriaMap, 
    collect(distinct matchSnippet) as matchSnippets, 
-   collect(distinct whereSnippet) + [keywordWhereSnippet] as whereSnippets
+   collect(distinct whereSnippet)  as whereCollectSnippets, [keywordWhereSnippet] as keywordWhereSnippets
+
+WITH searchCriteria, searchCriteriaMap, 
+   matchSnippets, whereCollectSnippets + keywordWhereSnippets as whereSnippets
 
 WITH searchCriteria, searchCriteriaMap, matchSnippets, 
    [x IN whereSnippets WHERE x <> "" | x] as whereSnippets
@@ -148,23 +158,38 @@ WITH searchCriteria, searchCriteriaMap,
    + CASE WHEN size(whereSnippets) > 0 THEN "\nWHERE " + apoc.text.join(whereSnippets, "\n AND ") ELSE "" END
    + "\nRETURN movie" 
    as cypher 
+
 CALL apoc.cypher.run(cypher, { searchCriteriaMap: searchCriteriaMap, searchCriteria: searchCriteria }) YIELD value
 WITH distinct(value.movie) as movie
 LIMIT 300
 WITH apoc.map.merge(properties(movie), {
    nodeId: id(movie),
    genres: [(movie)<-[:HAS_GENRE]->(genre:Genre) | properties(genre)],
-   actors: [(movie)<-[:ACTED_IN]-(actor:Person) | properties(actor)],
    directors: [(movie)-[:DIRECTED]->(director:Person)| properties(director)]
 }) as movie ORDER BY movie.title
 
 WITH collect(movie) as movies, 
-  collect(apoc.convert.toFloat(movie.revenue)) as revenues,
+  collect(toFloat(movie.revenue)) as revenues,
+  collect(toFloat(movie.year)) as years,
+  collect(toFloat(movie.imdbRating)) as imdbRatings,
+  collect(toFloat(movie.runtime)) as runtimes,
   [x IN apoc.coll.flatten(collect(movie.genres)) | x.name] as genres,
-  [x IN apoc.coll.flatten(collect(movie.actors)) | x.name] as actors,
   [x IN apoc.coll.flatten(collect(movie.directors)) | x.name] as directors
 
 WITH movies,
+apoc.coll.frequenciesAsMap([x IN imdbRatings |
+   CASE 
+      WHEN 1 <= x < 11 THEN "1+"
+      WHEN 2 <= x < 11 THEN "2+"
+      WHEN 3 <= x < 11 THEN "3+"
+      WHEN 4 <= x < 11 THEN "4+"
+      WHEN 5 <= x < 11 THEN "5+"
+      WHEN 6 <= x < 11 THEN "6+"
+      WHEN 7 <= x < 11 THEN "7+"
+      WHEN 8 <= x < 11 THEN "8+"
+      WHEN 9 <= x < 11 THEN "9+"
+   END 
+]) as imdbBucket,
    apoc.coll.frequenciesAsMap([x IN revenues |
       CASE 
          WHEN 0 <= x < 50000000 THEN "0-50M"
@@ -174,17 +199,45 @@ WITH movies,
          WHEN 500000000 <= x < 1000000000 THEN "500M-1B"
          WHEN 1000000000 <= x THEN "> 1B"
       END 
-   ]) as revenueBuckets,
+   ]) as revenueBucket,
+   
+   apoc.coll.frequenciesAsMap([x IN runtimes |
+      CASE 
+         WHEN 0 <= x < 60 THEN "<1 hour" 
+         WHEN 60 <= x < 180 THEN "1-3 hour" 
+         WHEN 180 <= x < 360 THEN "3-6 hour"
+         WHEN 360 <= x < 1000000 THEN ">6 hour"
+      END 
+   ]) as runtimeBucket,
+   apoc.coll.frequenciesAsMap([x IN years |
+      CASE 
+         WHEN 1900 <= x < 1910 THEN "1900s"
+         WHEN 1910 <= x < 1920 THEN "1910s"
+         WHEN 1920 <= x < 1930 THEN "1920s"
+         WHEN 1930 <= x < 1940 THEN "1930s"
+         WHEN 1940 <= x < 1950 THEN "1940s"
+         WHEN 1950 <= x < 1960 THEN "1950s"
+         WHEN 1960 <= x < 1970 THEN "1960s"
+         WHEN 1970 <= x < 1980 THEN "1970s"
+         WHEN 1980 <= x < 1990 THEN "1980s"
+         WHEN 1990 <= x < 2000 THEN "1990s"
+         WHEN 2000 <= x < 2010 THEN "2000s"
+         WHEN 2010 <= x < 2020 THEN "2010s"
+         WHEN 2020 <= x < 2030 THEN "2020s"
+      END 
+   ]) as yearBucket,
    apoc.coll.frequenciesAsMap(genres) as genres, 
-   apoc.coll.frequenciesAsMap(actors) as actors,   
-   apoc.coll.frequenciesAsMap(directors) as directors,   
+   apoc.coll.frequenciesAsMap(directors) as directors  
 
 RETURN {
     movies: movies,
     facets: {
-      	revenueBuckets: revenueBuckets,
+      revenueBucket: revenueBucket,
+      runtimeBucket:runtimeBucket,
+      yearBucket:yearBucket,
+      imdbBucket:imdbBucket,
 		genres: genres,
-		actors: actors,
 		directors: directors
     }
-} as response`
+} as response
+`
