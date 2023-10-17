@@ -25,14 +25,9 @@ const Results = ({ searchCriteria, setSearchCriteria,
         console.log("query runs: ")
         let getInitialResults = async () => {
             let data = await runNeoApi(SearchWithFacets, {
-                listsToFetch: [
-                    { label: "Movie", property: "year" },
-                    { label: "Genre", property: "name" }
-                ],
                 searchCriteria: searchCriteria
-            }, {
-                searchCriteria: searchCriteria
-            });
+            }, {});
+            
             setLoading(false);
             setData(data);
 

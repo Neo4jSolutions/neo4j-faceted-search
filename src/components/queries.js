@@ -15,7 +15,7 @@ export const GetPropertyValuesMultiple = `
 		replace(newCypher, '$$' + x, listToFetch[x])
 	) as newCypher
 	CALL apoc.cypher.run(newCypher, {}) YIELD value
-	WITH listToFetch, collect(value.value) as values
+	WITH listToFetch, collect(value.value)[0..100] as values
 	RETURN {
 		label: listToFetch.label, 
 		property: listToFetch.property, 
@@ -47,7 +47,7 @@ WITH $searchCriteria as searchCriteria,
 			",
          imdbRating: "
 			   any(x IN searchCriteria.imdbRanges WHERE 
-				  x.low <= toFloat(movie.runtime) < x.high
+				  x.low <= toFloat(movie.imdbRating) < x.high
 			   )
 			",
 			noProperty: ""
@@ -66,7 +66,7 @@ WITH $searchCriteria as searchCriteria,
     },
     Director: {
 		props: ["name"],
-		match: "(movie:Movie)<-[:DIRECTED]-(director:Person)",
+		match: "(movie:Movie)<-[:DIRECTED]-(director:Director)",
 		variable: "director"
     }
 } as cypherModel
@@ -90,7 +90,7 @@ CALL apoc.when(size(searchCriteria.keywords) > 0,
    "
    CALL db.index.fulltext.queryNodes('moviesFullText', keywords) YIELD node
    WITH CASE 
-   	  WHEN apoc.label.exists(node, 'Person') THEN [(node)<-[:ACTED_IN|DIRECTED]-(person:Person) | node]
+     WHEN apoc.label.exists(node, 'Person') THEN [(node)<-[:ACTED_IN|DIRECTED]-(person:Person) | node]
 	  WHEN apoc.label.exists(node, 'Genre') THEN [(node)<-[:HAS_GENRE]-(genre:Genre) | node]
       ELSE node				// assumed to be Movie
    END as movie
@@ -113,7 +113,7 @@ WITH cypherModel, searchCriteria, searchCriteriaMap, keywordWhereSnippet,
 			{searchKey: "revenueRanges", propKey: "revenue"},
 			{searchKey: "yearRanges", propKey: "year"},
 			{searchKey: "runtimeRanges", propKey: "runtime"},
-            {searchKey: "imdbRanges", propKey: "imdbRating"}
+         {searchKey: "imdbRanges", propKey: "imdbRating"}
 		] 
 		|
 		CASE WHEN size(searchCriteria[x.searchKey]) > 0 
@@ -161,11 +161,11 @@ WITH searchCriteria, searchCriteriaMap,
 
 CALL apoc.cypher.run(cypher, { searchCriteriaMap: searchCriteriaMap, searchCriteria: searchCriteria }) YIELD value
 WITH distinct(value.movie) as movie
-LIMIT 100
+LIMIT 250
 WITH apoc.map.merge(properties(movie), {
    nodeId: id(movie),
    genres: [(movie)-[:IN_GENRE]->(genre:Genre) | properties(genre)],
-   directors: [(movie)-[:DIRECTED]->(director:Person)| properties(director)]
+   directors: [(movie)<-[:DIRECTED]-(director:Director)| properties(director)]
 }) as movie ORDER BY movie.title
 
 WITH collect(movie) as movies, 
@@ -179,17 +179,13 @@ WITH collect(movie) as movies,
 WITH movies,
 apoc.coll.frequenciesAsMap([x IN imdbRatings |
    CASE 
-      WHEN 1 <= x < 11 THEN "1+"
-      WHEN 2 <= x < 11 THEN "2+"
-      WHEN 3 <= x < 11 THEN "3+"
-      WHEN 4 <= x < 11 THEN "4+"
-      WHEN 5 <= x < 11 THEN "5+"
-      WHEN 6 <= x < 11 THEN "6+"
-      WHEN 7 <= x < 11 THEN "7+"
-      WHEN 8 <= x < 11 THEN "8+"
-      WHEN 9 <= x < 11 THEN "9+"
+      WHEN x < 2 THEN "Really Bad"
+      WHEN 2 <= x < 4 THEN "Not good"
+      WHEN 4 <= x < 7 THEN "Ok"
+      WHEN 7 <= x < 9 THEN "Good"
+      WHEN 9 <= x THEN "Excellent"
    END 
-]) as imdbBucket,
+]) as imdbRatingBucket,
    apoc.coll.frequenciesAsMap([x IN revenues |
       CASE 
          WHEN 0 <= x < 50000000 THEN "0-50M"
@@ -197,16 +193,17 @@ apoc.coll.frequenciesAsMap([x IN imdbRatings |
          WHEN 100000000 <= x < 250000000 THEN "100-250M"
          WHEN 250000000 <= x < 500000000 THEN "250-500M"
          WHEN 500000000 <= x < 1000000000 THEN "500M-1B"
-         WHEN 1000000000 <= x THEN "> 1B"
+         WHEN 1000000000 <= x THEN ">1B"
       END 
    ]) as revenueBucket,
    
    apoc.coll.frequenciesAsMap([x IN runtimes |
       CASE 
          WHEN 0 <= x < 60 THEN "<1 hour" 
-         WHEN 60 <= x < 180 THEN "1-3 hour" 
-         WHEN 180 <= x < 360 THEN "3-6 hour"
-         WHEN 360 <= x < 1000000 THEN ">6 hour"
+         WHEN 60 <= x < 120 THEN "1-2 hours" 
+         WHEN 120 <= x < 180 THEN "2-3 hours"
+         WHEN 180 <= x < 240 THEN "3-4 hours"
+         WHEN 240 <= x < 1000000 THEN ">4 hours"
       END 
    ]) as runtimeBucket,
    apoc.coll.frequenciesAsMap([x IN years |
@@ -235,7 +232,7 @@ RETURN {
       revenueBucket: revenueBucket,
       runtimeBucket:runtimeBucket,
       yearBucket:yearBucket,
-      imdbBucket:imdbBucket,
+      imdbRatingBucket:imdbRatingBucket,
 		genres: genres,
 		directors: directors
     }

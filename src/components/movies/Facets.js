@@ -1,20 +1,25 @@
 
 import React, { useState, useEffect } from "react";
-import { Row, Empty, Menu, Icon, Input, Spin, Button, Typography } from "antd";
+import { Row, Empty, Icon, Menu, Input, Spin, Button, Typography } from "antd";
+import {
+    CheckOutlined,
+    CalendarOutlined,
+    AppstoreOutlined,
+    DollarOutlined,
+    FieldTimeOutlined,
+    LikeOutlined,
+    UserOutlined
+} from '@ant-design/icons';
 const { SubMenu } = Menu;
 import { GetPropertyValuesMultiple } from '@/components/queries';
 import { runNeoApi } from "../callNeoApi";
 
 export const PresetMovieRatings = [
-    { low: 1, high: 11, label: 'Movie', property: 'imdbRating', value: "1+" },
-    { low: 2, high: 11, label: 'Movie', property: 'imdbRating', value: "2+" },
-    { low: 3, high: 11, label: 'Movie', property: 'imdbRating', value: "3+" },
-    { low: 4, high: 11, label: 'Movie', property: 'imdbRating', value: "4+" },
-    { low: 5, high: 11, label: 'Movie', property: 'imdbRating', value: "5+" },
-    { low: 6, high: 11, label: 'Movie', property: 'imdbRating', value: "6+" },
-    { low: 7, high: 11, label: 'Movie', property: 'imdbRating', value: "7+" },
-    { low: 8, high: 11, label: 'Movie', property: 'imdbRating', value: "8+" },
-    { low: 9, high: 11, label: 'Movie', property: 'imdbRating', value: "9+" },
+    { low: 0, high: 2, label: 'Movie', property: 'imdbRating', value: "Really Bad" },
+    { low: 2, high: 4, label: 'Movie', property: 'imdbRating', value: "Not good" },
+    { low: 4, high: 7, label: 'Movie', property: 'imdbRating', value: "Ok" },
+    { low: 7, high: 9, label: 'Movie', property: 'imdbRating', value: "Good" },
+    { low: 9, high: 10, label: 'Movie', property: 'imdbRating', value: "Excellent" }
 ];
 
 export const PresetYearRanges = [
@@ -35,7 +40,7 @@ export const PresetYearRanges = [
 
 export const PresetMovieRevenues = [
     { low: 0, high: 50000000, label: 'Movie', property: 'revenue', value: "0-50M" },
-    { low: 50000000, high: 100000000, label: 'Movie', property: 'revenue', value: "50M-100M" },
+    { low: 50000000, high: 100000000, label: 'Movie', property: 'revenue', value: "50-100M" },
     { low: 100000000, high: 250000000, label: 'Movie', property: 'revenue', value: "100-250M" },
     { low: 250000000, high: 500000000, label: 'Movie', property: 'revenue', value: "250-500M" },
     { low: 500000000, high: 1000000000, label: 'Movie', property: 'revenue', value: "500M-1B" },
@@ -44,9 +49,10 @@ export const PresetMovieRevenues = [
 
 export const PresetMovieRunTimes = [
     { low: 0, high: 60, label: 'Movie', property: 'runtime', value: "<1 hour" },
-    { low: 60, high: 180, label: 'Movie', property: 'runtime', value: "1-3 hour" },
-    { low: 180, high: 360, label: 'Movie', property: 'runtime', value: "3-6 hour" },
-    { low: 360, high: 100000, label: 'Movie', property: 'runtime', value: ">6 hour" }
+    { low: 60, high: 120, label: 'Movie', property: 'runtime', value: "1-2 hours" },
+    { low: 120, high: 180, label: 'Movie', property: 'runtime', value: "2-3 hours" },
+    { low: 180, high: 240, label: 'Movie', property: 'runtime', value: "3-4 hours" },
+    { low: 240, high: 100000, label: 'Movie', property: 'runtime', value: ">4 hours" }
 ];
 
 export const MenuKeys = {
@@ -60,12 +66,12 @@ export const MenuKeys = {
 }
 
 const IconMap = {
-    MovieYears: "team",
-    Genres: "appstore",
-    Revenues: "appstore",
-    Ratings: "appstore",
-    Runtimes: "appstore",
-    Directors: "appstore",
+    MovieYears: <CalendarOutlined />,
+    Genres: <AppstoreOutlined />,
+    Revenues: <DollarOutlined />,
+    Ratings: <LikeOutlined />,
+    Runtimes: <FieldTimeOutlined />,
+    Directors: <UserOutlined />,
 
 }
 
@@ -82,7 +88,7 @@ const getMenus = ({ userChecks, setUserChecks, searchCriteria, setSearchCriteria
         subMenus.push(subMenu(MenuKeys.Ratings, "Ratings", IconMap.Ratings, ratings));
         subMenus.push(subMenu(MenuKeys.Revenues, "Revenues", IconMap.Revenues, revenues));
         subMenus.push(subMenu(MenuKeys.Runtimes, "Runtimes", IconMap.Runtimes, runtimes));
-        // subMenus.push(subMenu(MenuKeys.Directors, "Directors", IconMap.Directors, directors));
+        //subMenus.push(subMenu(MenuKeys.Directors, "Directors", IconMap.Directors, directors));
 
         return subMenus;
     }
@@ -107,46 +113,25 @@ export const addToSearchCriteria = ({ searchCriteria, setSearchCriteria, coldSta
     var newSearchCriteria = coldStart ? {} : { ...searchCriteria };
     setColdStart(false);
 
-    if (value.label === 'Movie' && value.property === 'imdbRating') {
-        var imdbRanges = newSearchCriteria.imdbRanges ? newSearchCriteria.imdbRanges.slice() : [];
-        const index = imdbRanges.findIndex(x => x.low === value.low && x.high === value.high);
+    if (value.label === 'Movie') {
+        const rangeMap = {
+            imdbRating: 'imdbRanges',
+            revenue: 'revenueRanges',
+            runtime: 'runtimeRanges',
+            year: 'yearRanges'
+        }
+    
+        const stringKey = rangeMap[value.property];
+        var ranges = newSearchCriteria[stringKey] ? newSearchCriteria[stringKey].slice() : [];
+        const index = ranges.findIndex(x => x.low === value.low && x.high === value.high);
+        
         if (index === -1) {
-            imdbRanges.push({
+            ranges.push({
                 low: value.low,
                 high: value.high
             })
+            newSearchCriteria[stringKey] = ranges;
         }
-        newSearchCriteria.imdbRanges = imdbRanges;
-    } else if (value.label === 'Movie' && value.property === 'revenue') {
-        var revenueRanges = newSearchCriteria.revenueRanges ? newSearchCriteria.revenueRanges.slice() : [];
-        const index = revenueRanges.findIndex(x => x.low === value.low && x.high === value.high);
-        if (index === -1) {
-            revenueRanges.push({
-                low: value.low,
-                high: value.high
-            })
-        }
-        newSearchCriteria.revenueRanges = revenueRanges;
-    } else if (value.label === 'Movie' && value.property === 'runtime') {
-        var runtimeRanges = newSearchCriteria.runtimeRanges ? newSearchCriteria.runtimeRanges.slice() : [];
-        const index = runtimeRanges.findIndex(x => x.low === value.low && x.high === value.high);
-        if (index === -1) {
-            runtimeRanges.push({
-                low: value.low,
-                high: value.high
-            })
-        }
-        newSearchCriteria.runtimeRanges = runtimeRanges;
-    } else if (value.label === 'Movie' && value.property === 'year') {
-        var yearRanges = newSearchCriteria.yearRanges ? newSearchCriteria.yearRanges.slice() : [];
-        const index = yearRanges.findIndex(x => x.low === value.low && x.high === value.high);
-        if (index === -1) {
-            yearRanges.push({
-                low: value.low,
-                high: value.high
-            })
-        }
-        newSearchCriteria.yearRanges = yearRanges;
     } else {
         var selectedStringItems = (newSearchCriteria.selectedStringItems) ? newSearchCriteria.selectedStringItems.slice() : [];
         var entryAdded = false;
@@ -175,46 +160,22 @@ export const addToSearchCriteria = ({ searchCriteria, setSearchCriteria, coldSta
 export const removeFromSearchCriteria = ({ searchCriteria, setSearchCriteria, value }) => {
     var newSearchCriteria = { ...searchCriteria };
 
-    if (value.label === 'Movie' && value.property === 'imdbRating') {
-        var imdbRanges = newSearchCriteria.imdbRanges ? newSearchCriteria.imdbRanges.slice() : [];
-        const index = imdbRanges.findIndex(x => x.low === value.low && x.high === value.high);
-        if (index === -1) {
-            imdbRanges.push({
-                low: value.low,
-                high: value.high
-            })
+    if (value.label === 'Movie') {
+        const rangeMap = {
+            imdbRating: 'imdbRanges',
+            revenue: 'revenueRanges',
+            runtime: 'runtimeRanges',
+            year: 'yearRanges'
         }
-        newSearchCriteria.imdbRanges = imdbRanges;
-    } else if (value.label === 'Movie' && value.property === 'revenue') {
-        var revenueRanges = newSearchCriteria.revenueRanges ? newSearchCriteria.revenueRanges.slice() : [];
-        const index = revenueRanges.findIndex(x => x.low === value.low && x.high === value.high);
-        if (index === -1) {
-            revenueRanges.push({
-                low: value.low,
-                high: value.high
-            })
+    
+        const stringKey = rangeMap[value.property];
+        var ranges = newSearchCriteria[stringKey] ? newSearchCriteria[stringKey].slice() : [];
+        const index = ranges.findIndex(x => x.low === value.low && x.high === value.high);
+        
+        if (index >= 0) {
+            ranges.splice(index, 1);
+            newSearchCriteria[stringKey] = ranges;
         }
-        newSearchCriteria.revenueRanges = revenueRanges;
-    } else if (value.label === 'Movie' && value.property === 'runtime') {
-        var runtimeRanges = newSearchCriteria.runtimeRanges ? newSearchCriteria.runtimeRanges.slice() : [];
-        const index = runtimeRanges.findIndex(x => x.low === value.low && x.high === value.high);
-        if (index === -1) {
-            runtimeRanges.push({
-                low: value.low,
-                high: value.high
-            })
-        }
-        newSearchCriteria.runtimeRanges = runtimeRanges;
-    } else if (value.label === 'Movie' && value.property === 'year') {
-        var yearRanges = newSearchCriteria.yearRanges ? newSearchCriteria.yearRanges.slice() : [];
-        const index = yearRanges.findIndex(x => x.low === value.low && x.high === value.high);
-        if (index === -1) {
-            yearRanges.push({
-                low: value.low,
-                high: value.high
-            })
-        }
-        newSearchCriteria.yearRanges = yearRanges;
     } else {
         var selectedStringItems = (newSearchCriteria.selectedStringItems) ? newSearchCriteria.selectedStringItems.slice() : [];
         if (selectedStringItems && selectedStringItems.length > 0) {
@@ -258,22 +219,13 @@ const getFacetCount = (facetCounts, value) => {
     var key = '';
     switch (value.label) {
         case 'Movie':
-            key = 'imdbBucket';
+            key = value.property + 'Bucket';
             break;
-        case 'Movie':
-            key = 'yearBucket';
-            break;
-        case 'Genres':
+        case 'Genre':
             key = 'genres';
             break;
-        case 'Directors':
+        case 'Director':
             key = 'directors';
-            break;
-        case 'Movie':
-            key = 'revenueBucket';
-            break;
-        case 'Movie':
-            key = 'runtimeBucket';
             break;
         default:
             break;
@@ -325,7 +277,7 @@ const getMenuItems = ({ values, menuFilters, userChecks, key, handler, coldStart
                 onClick={handler({ itemKey, value })}
             >
                 <span title={displayText}>
-                    {isChecked ? <Icon type="check" /> : <></>}
+                    {isChecked ? <CheckOutlined /> : <></>}
                     <span>{displayText}</span>
                 </span>
             </Menu.Item>
@@ -336,14 +288,14 @@ const getMenuItems = ({ values, menuFilters, userChecks, key, handler, coldStart
 
 const getSubMenu = ({ userChecks, setUserChecks, searchCriteria, setSearchCriteria,
     coldStart, setColdStart, menuFilters, setMenuFilters, facetCounts }) =>
-    (key, titleText, iconName, values) => {
+    (key, titleText, icon, values) => {
         const handler = clickHandler({ userChecks, setUserChecks, searchCriteria, setSearchCriteria, coldStart, setColdStart });
         return (
             <SubMenu
                 key={key}
                 title={
                     <span>
-                        <Icon type={iconName} />
+                        { icon }
                         <span>{titleText}</span>
                     </span>
                 }
@@ -401,22 +353,20 @@ const Facets = (props) => {
     const [runtimes, setRunTime] = useState(PresetMovieRunTimes);
 
     const [defaultOpenKeys, setDefaultOpenKeys] = useState([]);
-    const [defaultSelectedKeys, setDefaultSelectedKeys] = useState(["genres_menu_Adventure"]);
+    const [defaultSelectedKeys, setDefaultSelectedKeys] = useState([]);
 
     const handleReset = () => {
         setSearchCriteria({})
         setUserChecks({})
         setColdStart(false)
-
     };
-
 
     useEffect(() => {
         let getInitialFacets = async () => {
             let data = await runNeoApi(GetPropertyValuesMultiple, {
                 listsToFetch: [
                     { label: "Genre", property: "name" },
-                    { label: "Director", property: "name" }
+                    //{ label: "Director", property: "name" }
                 ]
             }, {});
             setLoading(false);
