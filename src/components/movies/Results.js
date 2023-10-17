@@ -87,7 +87,7 @@ const Results = ({ searchCriteria, setSearchCriteria,
 
     return (
         <div style={{
-            marginLeft: '10px',
+            marginLeft: '25px',
             width: "calc(100vw - 600px)",
             height: "calc(100vh - 240px)",
             alignItems: "center"
@@ -95,14 +95,14 @@ const Results = ({ searchCriteria, setSearchCriteria,
             <Row type="flex">
                 <Col>
                     {coldStart ? null :
-                        <span style={{ marginRight: '10px' }}>Number of results: {movies.length}</span>
+                        <span style={{ marginRight: '25px' }}>Number of results: {movies.length}</span>
                     }
                 </Col>
             </Row>
             <div style={{
-                // maxWidth: "calc(100vw - 600px)",
-                // maxHeight: "calc(100vh - 190px)",
-                // overflowY: "scroll"
+                maxWidth: "calc(100vw - 600px)",
+                maxHeight: "calc(100vh - 50px)",
+                overflowY: "scroll"
             }}>
                 <List
                     dataSource={movies ? movies : []}
@@ -120,26 +120,20 @@ const Results = ({ searchCriteria, setSearchCriteria,
                                         <div className="card-img-container">
                                             <img
                                                 className="card-img"
-                                                src={"//images.weserv.nl/?url=" + item.poster + "&w=200&h=200"}
+                                                src={"//images.weserv.nl/?url=" + item.poster + "&w=120&h=120"}
                                                 alt=""
                                                 onClick={() => this.props.runRecommendationEngines(item)}
                                             />
                                         </div>
                                         <div className="card-text">
                                             <Paragraph>
-                                                <Text strong>{item.title}</Text>
+                                                <Text strong style={{color: 'white'}}>{item.title}</Text>
                                             </Paragraph>
                                             <Row type="flex" flexwrap="wrap" flex="1">
-                                                <Col>Plot: {item.plot}</Col>
+                                                <Col>{item.plot}</Col>
                                             </Row>
                                             <Row type="flex" flexwrap="wrap" flex="1">
-                                                <Col>Release Year: {item.year}</Col>
-                                            </Row>
-                                            <Row type="flex" flexwrap="wrap" flex="1">
-                                                <Col>Rating: {item.imdbRating}</Col>
-                                            </Row>
-                                            <Row type="flex" flexwrap="wrap" flex="1">
-                                                <Col>Run Time: {item.runtime}</Col>
+                                                <Col>{item.year}, {item.runtime} minutes, {item.imdbRating} imdb rating</Col>
                                             </Row>
                                         </div>
                                     </div>

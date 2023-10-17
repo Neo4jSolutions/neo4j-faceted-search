@@ -56,7 +56,7 @@ WITH $searchCriteria as searchCriteria,
     },
     Genre: {
 		props: ["name"],
-		match: "(movie:Movie)<-[:HAS_GENRE]-(genre:Genre)",
+		match: "(movie:Movie)-[:IN_GENRE]->(genre:Genre)",
 		variable: "genre"
     },
     Actor: {
@@ -161,10 +161,10 @@ WITH searchCriteria, searchCriteriaMap,
 
 CALL apoc.cypher.run(cypher, { searchCriteriaMap: searchCriteriaMap, searchCriteria: searchCriteria }) YIELD value
 WITH distinct(value.movie) as movie
-LIMIT 300
+LIMIT 100
 WITH apoc.map.merge(properties(movie), {
    nodeId: id(movie),
-   genres: [(movie)<-[:HAS_GENRE]->(genre:Genre) | properties(genre)],
+   genres: [(movie)-[:IN_GENRE]->(genre:Genre) | properties(genre)],
    directors: [(movie)-[:DIRECTED]->(director:Person)| properties(director)]
 }) as movie ORDER BY movie.title
 
