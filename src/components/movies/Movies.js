@@ -12,7 +12,14 @@ const Movies = (props) => {
     console.log("searchCriteria", searchCriteria)
 
     return (
-        <div style={{ display: 'flex', flexFlow: 'row', marginTop: '10px', borderBottom: '1px dotted gray' }}>
+        <div style={{ 
+                display: 'flex', 
+                flexFlow: 'row', 
+                marginTop: '10px', 
+                borderBottom: '1px dotted gray',
+                background: 'lightgray',
+                color: 'black'
+        }}>
             <Facets
                 searchCriteria={searchCriteria} setSearchCriteria={setSearchCriteria}
                 coldStart={coldStart} setColdStart={setColdStart}

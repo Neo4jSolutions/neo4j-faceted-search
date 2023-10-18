@@ -27,7 +27,7 @@ const Results = ({ searchCriteria, setSearchCriteria,
             let data = await runNeoApi(SearchWithFacets, {
                 searchCriteria: searchCriteria
             }, {});
-            
+
             setLoading(false);
             setData(data);
 
@@ -104,7 +104,7 @@ const Results = ({ searchCriteria, setSearchCriteria,
                     style={{ width: "100%" }}
                     renderItem={(item) => (
                         <List.Item
-                            style={{ cursor: "pointer" }}
+                            style={{ cursor: "pointer", borderBottom: '1px solid gray' }}
                         >
                             <List.Item.Meta
                                 style={{
@@ -122,7 +122,7 @@ const Results = ({ searchCriteria, setSearchCriteria,
                                         </div>
                                         <div className="card-text">
                                             <Paragraph>
-                                                <Text strong style={{color: 'white'}}>{item.title}</Text>
+                                                <Text strong>{item.title}</Text>
                                             </Paragraph>
                                             <Row type="flex" flexwrap="wrap" flex="1">
                                                 <Col>{item.plot}</Col>
